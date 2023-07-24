@@ -32,3 +32,6 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+ecs-fargate-app/policies/.DS_Store
+ecs-fargate-app/.DS_Store
+.DS_Store

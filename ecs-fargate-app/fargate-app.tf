@@ -12,7 +12,7 @@ resource "aws_cloudwatch_log_group" "service_log" {
   tags              = var.tags
 }
 
-data "aws_iam_role" "ecs_role" {
+data "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
 }
 
@@ -52,7 +52,7 @@ locals {
     {
       logDriver : "awslogs",
       options : {
-        awslogs-group : aws_cloudwatch_log_group.service_log[0].name,
+        awslogs-group : aws_cloudwatch_log_group.service_log.name,
         awslogs-region : "eu-central-1",
         awslogs-stream-prefix : "ecs"
       }
@@ -76,28 +76,24 @@ resource "aws_iam_role_policy_attachment" "custom_policy" {
 }
 
 resource "aws_iam_role" "execution_role" {
-  count               = (local.needs_execution_role ? 1 : 0)
   name                = "${var.service_name}-${terraform.workspace}-task-execution-role"
   assume_role_policy  = file("${path.module}/policies/assume/ecs-tasks.json")
   managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"]
 }
 
-resource "aws_iam_role_policy" "read-task-secrets" {
-  count  = (length(var.secrets) > 0 ? 1 : 0)
-  name   = "${var.service_name}-${terraform.workspace}-secrets"
-  role   = aws_iam_role.execution_role[0].id
-  policy = templatefile("${path.module}/policies/read-task-secrets.tftpl", { region : local.region, account_id : local.account_id, ssm_parameters : values(var.secrets) })
-}
+# resource "aws_iam_role_policy" "read-task-secrets" {
+#   name   = "${var.service_name}-${terraform.workspace}-secrets"
+#   role   = aws_iam_role.execution_role.id
+#   policy = templatefile("${path.module}/policies/read-task-secrets.tftpl", { region : local.region, account_id : local.account_id, ssm_parameters : values(var.secrets) })
+# }
 
 # task definition
 resource "aws_ecs_task_definition" "task" {
-  depends_on = [aws_security_group.lb_to_service] # via ENI
-
   family                   = "${var.service_name}-${terraform.workspace}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  execution_role_arn       = local.needs_execution_role ? aws_iam_role.execution_role[0].arn : data.aws_iam_role.ecs_role.arn
-  task_role_arn            = aws_iam_role.task_role.arn
+  execution_role_arn       = "${data.aws_iam_role.ecs_task_execution_role.arn}"
+  task_role_arn            = "arn:aws:iam::931338600976:role/test-role-ecs"
 
   cpu    = var.cpu
   memory = var.mem
@@ -113,7 +109,6 @@ resource "aws_ecs_task_definition" "task" {
 
 # service definition
 resource "aws_ecs_service" "service" {
-  count            = var.task_definition_only == true ? 0 : 1
   name             = var.service_name
   cluster          = var.ecs_cluster_id
   task_definition  = aws_ecs_task_definition.task.arn
@@ -123,27 +118,24 @@ resource "aws_ecs_service" "service" {
 
   network_configuration {
     security_groups = concat(
-      aws_security_group.lb_to_service[*].id,
-      aws_security_group.lb_priv_to_service[*].id,
       var.additional_security_groups[*]
     )
     subnets = var.task_subnets
   }
 
-  health_check_grace_period_seconds = (var.enable_public_lb || var.enable_private_lb) ? var.healthcheck_grace_period : null
+  health_check_grace_period_seconds =  var.healthcheck_grace_period
 
   # Allow external changes without Terraform plan difference
   lifecycle {
     ignore_changes = [desired_count]
   }
 
-  propagate_tags = "APP"
+  propagate_tags = "SERVICE"
   tags           = var.tags
 }
 
 
 resource "aws_service_discovery_service" "name" {
-  count = var.enable_local_discovery ? 1 : 0
   name  = var.local_discovery_service_name
 
   dns_config {
