@@ -53,7 +53,7 @@ variable "command" {
   default = []
 }
 variable "healthcheck_path" {
-  default = ""
+  default = "/"
 }
 variable "healthcheck_interval" {
   default = 30

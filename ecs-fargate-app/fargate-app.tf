@@ -130,6 +130,12 @@ resource "aws_ecs_service" "service" {
     ignore_changes = [desired_count]
   }
 
+  load_balancer {
+    target_group_arn = aws_alb_target_group.target-group-lb.arn
+    container_name   = var.service_name
+    container_port   = var.port
+  }
+
   propagate_tags = "SERVICE"
   tags           = var.tags
 }
