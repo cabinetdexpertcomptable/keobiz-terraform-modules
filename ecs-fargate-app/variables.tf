@@ -103,3 +103,6 @@ variable "docker_ulimits" {
   description = "see https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Ulimit.html"
   default     = []
 }
+variable "task_definition_only" {
+  default = false
+}

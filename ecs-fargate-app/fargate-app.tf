@@ -109,6 +109,7 @@ resource "aws_ecs_task_definition" "task" {
 
 # service definition
 resource "aws_ecs_service" "service" {
+  count            = var.task_definition_only == true ? 0 : 1
   name             = var.service_name
   cluster          = var.ecs_cluster_id
   task_definition  = aws_ecs_task_definition.task.arn
