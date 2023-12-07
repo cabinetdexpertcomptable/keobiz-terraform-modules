@@ -49,6 +49,7 @@ locals {
   }]
 
   logConf = (
+    var.logs == "cloudwatch" ?
     {
       logDriver : "awslogs",
       options : {
@@ -56,8 +57,93 @@ locals {
         awslogs-region : "eu-central-1",
         awslogs-stream-prefix : "ecs"
       }
+    } :
+    {
+      logDriver : "awsfirelens",
+      options : {
+        Name : "datadog",
+        apikey : var.datadog_api_key,
+        Host : "http-intake.logs.datadoghq.eu",
+        TLS : "on",
+        provider : "ecs",
+        dd_service : var.service_name,
+        dd_source : var.datadog_log_source,
+        dd_message_key : "log",
+        dd_tags : join(",", [for k, v in var.tags : format("%s:%s", k, v)])
+      }
     }
   )
+
+  firelensOptions = (
+    var.logs_json ?
+    {
+      enable-ecs-log-metadata : "true", # must be string
+      config-file-type : "file",
+      config-file-value : "/fluent-bit/configs/parse-json.conf"
+    } :
+    {
+      enable-ecs-log-metadata : "true" # must be string
+    }
+  )
+
+  fluentbit_task = (
+    var.logs == "cloudwatch" ?
+    [] :
+    [{
+      essential : true,
+      image : "public.ecr.aws/aws-observability/aws-for-fluent-bit:stable",
+      name : "log_router",
+      firelensConfiguration : {
+        type : "fluentbit",
+        options : local.firelensOptions
+      },
+      // below are defaults to avoid updating resources for nothing 
+      mountPoints  = [],
+      portMappings = [],
+      volumesFrom  = [],
+      environment  = [],
+      user         = "0",
+      cpu          = 0
+    }]
+  )
+
+  datadog_agent_task = (
+    var.enable_datadog_agent ?
+    [{
+      name : "datadog-agent",
+      image : var.datadog_agent_image_tag,
+      memory : 256,
+      cpu : 0,
+      environment : [
+        { name : "DD_API_KEY", value : var.datadog_api_key },
+        { name : "DD_SITE", value : "datadoghq.eu" },
+        { name : "ECS_FARGATE", value : "true" },
+        { name : "DD_TAGS", value : join(" ", [for k, v in var.tags : format("%s:%s", k, v)]) },
+        { name : "DD_APM_ENABLED", value : tostring(var.enable_datadog_agent_apm) },
+        { name : "DD_APM_IGNORE_RESOURCES", value : join(",", var.datadog_apm_ignore_ressources) },
+        { name : "DD_APM_NON_LOCAL_TRAFFIC", value : tostring(var.enable_datadog_non_local_apm) },
+        { name : "DD_ENV", value : lower(terraform.workspace) },
+        { name : "DD_LOGS_INJECTION", value : tostring(var.enable_datadog_logs_injection) },
+        { name : "DD_SERVICE", value : var.service_name }
+      ],
+      logConfiguration : var.collect_datadog_agent_logs ? {
+        logDriver : "awsfirelens",
+        options : {
+          Name : "datadog",
+          apikey : var.datadog_api_key,
+          Host : "http-intake.logs.datadoghq.eu",
+          TLS : "on",
+          provider : "ecs",
+          dd_service : var.service_name,
+          dd_source : "datadog-agent",
+          dd_message_key : "log",
+          dd_tags : join(",", [for k, v in var.tags : format("%s:%s", k, v)])
+        }
+      } : null
+    }] :
+    []
+  )
+
 }
 
 resource "aws_iam_role" "task_role" {
@@ -100,7 +186,7 @@ resource "aws_ecs_task_definition" "task" {
 
   container_definitions = jsonencode(
     flatten(
-      [local.main_task]
+      [local.main_task, local.fluentbit_task, local.datadog_agent_task]
     )
   )
 

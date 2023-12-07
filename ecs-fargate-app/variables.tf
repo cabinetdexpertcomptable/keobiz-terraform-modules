@@ -106,3 +106,36 @@ variable "docker_ulimits" {
 variable "task_definition_only" {
   default = false
 }
+variable "logs" {
+  default = "datadog"
+}
+variable "logs_json" {
+  default = true
+}
+variable "enable_datadog_agent" {
+  default = true
+}
+variable "datadog_api_key" {
+  default = ""
+}
+variable "enable_datadog_agent_apm" {
+  default = true
+}
+variable "enable_datadog_non_local_apm" {
+  default = true
+}
+variable "datadog_apm_ignore_ressources" {
+  default = ["GET /healthcheck"]
+}
+variable "datadog_agent_image_tag" {
+  default = "public.ecr.aws/datadog/agent:latest"
+}
+variable "datadog_log_source" {
+  default = "default"
+}
+variable "collect_datadog_agent_logs" {
+  default = false
+}
+variable "enable_datadog_logs_injection" {
+  default = true
+}
