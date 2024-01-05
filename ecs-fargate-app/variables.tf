@@ -139,3 +139,6 @@ variable "collect_datadog_agent_logs" {
 variable "enable_datadog_logs_injection" {
   default = true
 }
+variable "trace_debug" {
+  default = false
+}
