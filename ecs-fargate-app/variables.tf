@@ -142,3 +142,6 @@ variable "enable_datadog_logs_injection" {
 variable "datadog_source" {
   default = ""
 }
+variable "test" {
+  default = "test"
+}
