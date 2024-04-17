@@ -135,7 +135,7 @@ locals {
           TLS : "on",
           provider : "ecs",
           dd_service : var.service_name,
-          dd_source : "datadog-agent",
+          dd_source : var.datadog_source,
           dd_message_key : "log",
           dd_tags : join(",", [for k, v in var.tags : format("%s:%s", k, v)])
         }
