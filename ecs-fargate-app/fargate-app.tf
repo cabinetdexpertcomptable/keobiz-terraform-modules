@@ -28,6 +28,9 @@ locals {
     cpu : 0,
     image : var.image,
     name : var.service_name,
+    environment : [
+      { name : "DD_LOGS_INJECTION", value : tostring(var.enable_datadog_logs_injection) }
+    ],
     networkMode : "awsvpc",
     mountPoints : [],
     ulimits : (
