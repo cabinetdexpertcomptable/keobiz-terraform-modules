@@ -28,10 +28,6 @@ locals {
     cpu : 0,
     image : var.image,
     name : var.service_name,
-    environment : [
-      { name : "DD_LOGS_INJECTION", value : tostring(var.enable_datadog_logs_injection) },
-      { name : "TEST", value : tostring(var.test) }
-    ],
     networkMode : "awsvpc",
     mountPoints : [],
     ulimits : (
@@ -71,7 +67,7 @@ locals {
         TLS : "on",
         provider : "ecs",
         dd_service : var.service_name,
-        dd_source : var.datadog_source,
+        dd_source : var.datadog_log_source,
         dd_message_key : "log",
         dd_tags : join(",", [for k, v in var.tags : format("%s:%s", k, v)])
       }
