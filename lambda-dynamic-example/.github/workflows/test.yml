@@ -1,0 +1,51 @@
+name: Tests before deploy
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: eu-central-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate function configs
+        run: |
+          cd ../..
+          python3 scripts/generate-tf-config.py > infra/terraform/functions.auto.tfvars.json
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.4.6
+
+      - run: terraform init
+      - run: terraform validate
+      - name: Plan
+        run: |
+          terraform workspace select dev || terraform workspace new dev
+          terraform plan -var "lambda_package_version=test" -var-file=dev.tfvars

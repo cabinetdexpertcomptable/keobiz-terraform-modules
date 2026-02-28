@@ -1,0 +1,19 @@
+{
+  "name": "lambda-dynamic-example",
+  "version": "1.0.0",
+  "description": "Dynamic multi-Lambda project with auto-discovery",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint functions/ shared/ --ext .js",
+    "lint:fix": "eslint functions/ shared/ --ext .js --fix"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "description": "Processor Lambda - Background processing",
+  "handler": "index.handler",
+  "runtime": "nodejs20.x",
+  "memory_size": 512,
+  "timeout": 60,
+  "api_gateway": null,
+  "schedule": null
+}

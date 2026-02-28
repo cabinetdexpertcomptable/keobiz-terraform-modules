@@ -1,0 +1,16 @@
+{
+  "description": "API Lambda - HTTP endpoints",
+  "handler": "index.handler",
+  "runtime": "nodejs20.x",
+  "memory_size": 256,
+  "timeout": 30,
+  "api_gateway": {
+    "enabled": true,
+    "routes": [
+      { "method": "GET", "path": "/health" },
+      { "method": "GET", "path": "/users" },
+      { "method": "POST", "path": "/users" }
+    ]
+  },
+  "schedule": null
+}

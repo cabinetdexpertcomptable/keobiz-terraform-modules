@@ -1,0 +1,3 @@
+# API-specific dependencies (in addition to shared/requirements.txt)
+# Leave empty if no additional deps needed
+

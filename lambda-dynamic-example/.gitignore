@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build
+build/
+*-lambda-*.zip
+
+# Test
+coverage/
+
+# IDE
+.idea/
+.vscode/
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/*.tfstate*
+infra/terraform/functions.auto.tfvars.json
+
+# OS
+.DS_Store
+
+# Environment
+.env

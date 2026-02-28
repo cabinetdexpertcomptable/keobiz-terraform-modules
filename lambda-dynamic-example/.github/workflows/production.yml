@@ -1,0 +1,74 @@
+name: Build and deploy to production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: eu-central-1
+      S3_BUCKET: keobiz-lambda-packages
+      S3_PREFIX: dynamic-project
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get commit hash
+        run: echo "REF=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build all Lambda packages (auto-discovery)
+        run: |
+          chmod +x scripts/build.sh
+          ./scripts/build.sh $REF
+
+      - name: Upload all packages to S3
+        run: |
+          chmod +x scripts/upload.sh
+          ./scripts/upload.sh $REF $S3_BUCKET $S3_PREFIX
+
+  infra:
+    needs: [build]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: eu-central-1
+      TF_WORKSPACE: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get commit hash
+        run: echo "REF=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Generate Terraform config from function configs
+        run: |
+          cd ../..
+          python scripts/generate-tf-config.py > infra/terraform/functions.auto.tfvars.json
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.4.6
+
+      - run: terraform init
+
+      - name: Select workspace
+        run: terraform workspace select production || terraform workspace new production
+
+      - run: terraform validate
+
+      - name: Apply
+        run: terraform apply -var "lambda_package_version=$REF" -var-file=production.tfvars -auto-approve
+

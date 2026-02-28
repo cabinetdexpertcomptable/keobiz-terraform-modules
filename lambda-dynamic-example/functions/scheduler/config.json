@@ -1,0 +1,20 @@
+{
+  "description": "Scheduler Lambda - Cron jobs",
+  "handler": "index.handler",
+  "runtime": "nodejs20.x",
+  "memory_size": 256,
+  "timeout": 300,
+  "api_gateway": null,
+  "schedule": {
+    "cleanup": {
+      "enabled": true,
+      "expression": "rate(1 day)",
+      "input": { "task": "cleanup" }
+    },
+    "sync": {
+      "enabled": true,
+      "expression": "rate(1 hour)",
+      "input": { "task": "sync" }
+    }
+  }
+}
