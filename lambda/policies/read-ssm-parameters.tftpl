@@ -1,0 +1,31 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ReadSSMParameters",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameter",
+                "ssm:GetParameters",
+                "ssm:GetParametersByPath"
+            ],
+            "Resource": [
+                ${join(",\n                ", formatlist("\"arn:aws:ssm:%s:%s:parameter%s\"", region, account_id, ssm_parameters))}
+            ]
+        },
+        {
+            "Sid": "DecryptSSMParameters",
+            "Effect": "Allow",
+            "Action": [
+                "kms:Decrypt"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringLike": {
+                    "kms:RequestAlias": "alias/aws/ssm"
+                }
+            }
+        }
+    ]
+}
+
