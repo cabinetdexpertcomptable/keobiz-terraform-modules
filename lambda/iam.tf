@@ -49,8 +49,15 @@ resource "aws_iam_role_policy_attachment" "custom" {
 # ============================================
 # Secrets Manager Access (for Datadog API key and app secrets)
 # ============================================
+locals {
+  secrets_resources = concat(
+    var.enable_datadog && var.datadog_api_key_secret_arn != "" ? [var.datadog_api_key_secret_arn] : [],
+    var.secrets_arns
+  )
+}
+
 resource "aws_iam_role_policy" "secrets_access" {
-  count = var.enable_datadog || length(var.secrets_arns) > 0 ? 1 : 0
+  count = length(local.secrets_resources) > 0 ? 1 : 0
 
   name = "${local.function_name}-secrets-access"
   role = aws_iam_role.lambda.id
@@ -63,10 +70,7 @@ resource "aws_iam_role_policy" "secrets_access" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = concat(
-          var.enable_datadog && var.datadog_api_key_secret_arn != "" ? [var.datadog_api_key_secret_arn] : [],
-          var.secrets_arns
-        )
+        Resource = local.secrets_resources
       }
     ]
   })
